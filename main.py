@@ -16,8 +16,8 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 # =============== الأدمن والمطور ===============
 ADMINS = [8855682617]
-DEV = "@z_0_y2"
-AUTHOR = "@z_0_y2"
+DEV = "@m_69m_780"
+AUTHOR = "@m_69m_780"
 VERSION = "v3.5 - Per-Gateway 10-Card Counter"
 
 # =============== نظام المستخدمين والكودات ===============
