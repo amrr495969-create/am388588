@@ -55,11 +55,13 @@ bot = telebot.TeleBot(
 # ==================================================
 
 def is_authorized(user_id):
+
     # الأدمن مسموح دائمًا
     if user_id in ADMINS:
         return True
 
     if user_id in user_codes:
+
         expiry = user_codes[user_id]["expiry"]
 
         if expiry > time.time():
@@ -72,6 +74,7 @@ def is_authorized(user_id):
 
 
 def generate_user_code(expiry_days):
+
     code = hashlib.md5(
         f"{time.time()}-{random.random()}".encode()
     ).hexdigest()[:12]
@@ -85,6 +88,7 @@ def generate_user_code(expiry_days):
 
 
 def activate_user_code(user_id, code):
+
     code = code.strip()
 
     if code not in pending_codes:
@@ -106,13 +110,16 @@ def activate_user_code(user_id, code):
 
 
 def get_user_expiry(user_id):
+
     if user_id not in user_codes:
         return "Not registered"
 
     expiry = user_codes[user_id]["expiry"]
 
     if expiry <= time.time():
+
         del user_codes[user_id]
+
         return "Expired"
 
     return datetime.fromtimestamp(
@@ -134,18 +141,22 @@ def start_command(message):
         markup = types.InlineKeyboardMarkup(row_width=1)
 
         markup.add(
+
             types.InlineKeyboardButton(
                 "🔐 Create Code",
                 callback_data="create_code"
             ),
+
             types.InlineKeyboardButton(
                 "📊 Active Codes",
                 callback_data="list_codes"
             ),
+
             types.InlineKeyboardButton(
                 "👥 Users",
                 callback_data="list_users"
             )
+
         )
 
         bot.reply_to(
@@ -172,6 +183,7 @@ def start_command(message):
 
         return
 
+
     if is_authorized(user_id):
 
         expiry = get_user_expiry(user_id)
@@ -181,8 +193,13 @@ def start_command(message):
             f"""
 ✅ <b>Welcome</b>
 ━━━━━━━━━━━━━━━━━━━━━
-🆔 ID: <code>{user_id}</code>
-📅 Expires: <code>{expiry}</code>
+
+🆔 ID:
+<code>{user_id}</code>
+
+📅 Expires:
+<code>{expiry}</code>
+
 ━━━━━━━━━━━━━━━━━━━━━
 
 You are authorized to use the bot.
@@ -194,10 +211,12 @@ You are authorized to use the bot.
 
         return
 
+
     bot.reply_to(
         message,
         f"""
 ❌ <b>ACCESS DENIED</b>
+
 ━━━━━━━━━━━━━━━━━━━━━
 
 You don't have an active subscription.
@@ -206,7 +225,8 @@ You don't have an active subscription.
 
 <code>/activate CODE</code>
 
-📞 Contact: {DEV}
+📞 Contact:
+{DEV}
 
 ━━━━━━━━━━━━━━━━━━━━━
 """
@@ -239,6 +259,7 @@ Usage:
 
         return
 
+
     code = parts[1].strip()
 
     if activate_user_code(user_id, code):
@@ -249,6 +270,7 @@ Usage:
             message,
             f"""
 ✅ <b>Code activated successfully!</b>
+
 ━━━━━━━━━━━━━━━━━━━━━
 
 🆔 User ID:
@@ -289,6 +311,7 @@ def generate_code_command(message):
 
         return
 
+
     parts = message.text.split()
 
     if len(parts) != 2:
@@ -306,8 +329,11 @@ Example:
 
         return
 
+
     try:
+
         days = int(parts[1])
+
     except ValueError:
 
         bot.reply_to(
@@ -316,6 +342,7 @@ Example:
         )
 
         return
+
 
     if days <= 0:
 
@@ -326,12 +353,14 @@ Example:
 
         return
 
+
     code = generate_user_code(days)
 
     bot.reply_to(
         message,
         f"""
 ✅ <b>Code created!</b>
+
 ━━━━━━━━━━━━━━━━━━━━━
 
 🔑 Code:
@@ -367,6 +396,7 @@ def create_code_callback(call):
 
         return
 
+
     bot.answer_callback_query(call.id)
 
     msg = bot.send_message(
@@ -391,8 +421,11 @@ def create_code_from_button(message):
     if message.from_user.id not in ADMINS:
         return
 
+
     try:
+
         days = int(message.text.strip())
+
     except ValueError:
 
         bot.send_message(
@@ -401,6 +434,7 @@ def create_code_from_button(message):
         )
 
         return
+
 
     if days <= 0:
 
@@ -411,12 +445,14 @@ def create_code_from_button(message):
 
         return
 
+
     code = generate_user_code(days)
 
     bot.send_message(
         message.chat.id,
         f"""
 ✅ <b>Code created!</b>
+
 ━━━━━━━━━━━━━━━━━━━━━
 
 🔑 <code>{code}</code>
@@ -448,7 +484,9 @@ def list_codes_callback(call):
 
         return
 
+
     bot.answer_callback_query(call.id)
+
 
     if not pending_codes:
 
@@ -459,6 +497,7 @@ def list_codes_callback(call):
 
         return
 
+
     text = """
 📋 <b>Active Codes</b>
 ━━━━━━━━━━━━━━━━━━━━━
@@ -466,24 +505,30 @@ def list_codes_callback(call):
 
     expired = []
 
+
     for code, data in pending_codes.items():
 
         if data["expiry"] <= time.time():
 
             expired.append(code)
+
             continue
+
 
         expiry = datetime.fromtimestamp(
             data["expiry"]
         ).strftime("%Y-%m-%d %H:%M:%S")
+
 
         text += (
             f"\n🔑 <code>{code}</code>"
             f"\n📅 {expiry}\n"
         )
 
+
     for code in expired:
         del pending_codes[code]
+
 
     bot.send_message(
         call.from_user.id,
@@ -509,7 +554,9 @@ def list_users_callback(call):
 
         return
 
+
     bot.answer_callback_query(call.id)
+
 
     if not user_codes:
 
@@ -520,6 +567,7 @@ def list_users_callback(call):
 
         return
 
+
     text = """
 👥 <b>Users</b>
 ━━━━━━━━━━━━━━━━━━━━━
@@ -527,24 +575,30 @@ def list_users_callback(call):
 
     expired = []
 
+
     for uid, data in user_codes.items():
 
         if data["expiry"] <= time.time():
 
             expired.append(uid)
+
             continue
+
 
         expiry = datetime.fromtimestamp(
             data["expiry"]
         ).strftime("%Y-%m-%d %H:%M:%S")
+
 
         text += (
             f"\n🆔 <code>{uid}</code>"
             f"\n📅 {expiry}\n"
         )
 
+
     for uid in expired:
         del user_codes[uid]
+
 
     bot.send_message(
         call.from_user.id,
@@ -568,6 +622,7 @@ def codes_command(message):
 
         return
 
+
     if not pending_codes:
 
         bot.reply_to(
@@ -577,25 +632,32 @@ def codes_command(message):
 
         return
 
+
     text = """
 📋 <b>Active Codes</b>
 ━━━━━━━━━━━━━━━━━━━━━
 """
 
+
     for code, data in list(pending_codes.items()):
 
         if data["expiry"] <= time.time():
+
             del pending_codes[code]
+
             continue
+
 
         expiry = datetime.fromtimestamp(
             data["expiry"]
         ).strftime("%Y-%m-%d %H:%M:%S")
 
+
         text += (
             f"\n🔑 <code>{code}</code>"
             f"\n📅 {expiry}\n"
         )
+
 
     bot.reply_to(
         message,
@@ -619,6 +681,7 @@ def users_command(message):
 
         return
 
+
     if not user_codes:
 
         bot.reply_to(
@@ -628,26 +691,32 @@ def users_command(message):
 
         return
 
+
     text = """
 👥 <b>Users</b>
 ━━━━━━━━━━━━━━━━━━━━━
 """
+
 
     for uid, data in list(user_codes.items()):
 
         if data["expiry"] <= time.time():
 
             del user_codes[uid]
+
             continue
+
 
         expiry = datetime.fromtimestamp(
             data["expiry"]
         ).strftime("%Y-%m-%d %H:%M:%S")
 
+
         text += (
             f"\n🆔 <code>{uid}</code>"
             f"\n📅 {expiry}\n"
         )
+
 
     bot.reply_to(
         message,
@@ -671,27 +740,152 @@ def status_command(message):
 
         return
 
+
     active_users = 0
+
 
     for uid, data in list(user_codes.items()):
 
         if data["expiry"] > time.time():
+
             active_users += 1
+
 
     bot.reply_to(
         message,
         f"""
 📊 <b>Bot Status</b>
+
 ━━━━━━━━━━━━━━━━━━━━━
 
-🟢 Bot: Online
-👥 Active users: <b>{active_users}</b>
-🔑 Pending codes: <b>{len(pending_codes)}</b>
+🟢 Bot:
+Online
+
+👥 Active users:
+<b>{active_users}</b>
+
+🔑 Pending codes:
+<b>{len(pending_codes)}</b>
 
 ━━━━━━━━━━━━━━━━━━━━━
 {VERSION} | {DEV}
 """
     )
+
+
+# ==================================================
+# استقبال ملفات TXT
+# ==================================================
+
+@bot.message_handler(content_types=["document"])
+def handle_document(message):
+
+    user_id = message.from_user.id
+
+    if not is_authorized(user_id):
+
+        bot.reply_to(
+            message,
+            "❌ <b>ACCESS DENIED</b>"
+        )
+
+        return
+
+
+    filename = message.document.file_name or "unknown.txt"
+
+    # السماح بملفات TXT فقط
+    if not filename.lower().endswith(".txt"):
+
+        bot.reply_to(
+            message,
+            """
+❌ <b>نوع الملف غير مدعوم</b>
+
+📄 أرسل ملف بصيغة:
+<code>.txt</code>
+"""
+        )
+
+        return
+
+
+    status = bot.reply_to(
+        message,
+        "📂 <b>جاري استلام الملف...</b>"
+    )
+
+
+    try:
+
+        file_info = bot.get_file(
+            message.document.file_id
+        )
+
+        file_data = bot.download_file(
+            file_info.file_path
+        )
+
+
+        try:
+
+            content = file_data.decode("utf-8")
+
+        except UnicodeDecodeError:
+
+            content = file_data.decode(
+                "utf-8",
+                errors="ignore"
+            )
+
+
+        lines = [
+            line.strip()
+            for line in content.splitlines()
+            if line.strip()
+        ]
+
+
+        bot.edit_message_text(
+            f"""
+✅ <b>تم استلام الملف بنجاح</b>
+
+━━━━━━━━━━━━━━━━━━━━━
+
+📁 الاسم:
+<code>{filename}</code>
+
+📦 الحجم:
+<b>{len(file_data):,}</b> Bytes
+
+📝 عدد الأسطر:
+<b>{len(lines):,}</b>
+
+━━━━━━━━━━━━━━━━━━━━━
+
+⚡ {VERSION}
+👤 {AUTHOR}
+""",
+            chat_id=message.chat.id,
+            message_id=status.message_id
+        )
+
+
+    except Exception as e:
+
+        bot.edit_message_text(
+            f"""
+❌ <b>حدث خطأ أثناء قراءة الملف</b>
+
+━━━━━━━━━━━━━━━━━━━━━
+
+<code>{str(e)[:500]}</code>
+
+━━━━━━━━━━━━━━━━━━━━━
+""",
+            chat_id=message.chat.id,
+            message_id=status.message_id
+        )
 
 
 # ==================================================
@@ -703,9 +897,11 @@ if __name__ == "__main__":
     print("=" * 50)
     print("🤖 TELEGRAM BOT")
     print("=" * 50)
+
     print(f"👑 Admins: {ADMINS}")
     print(f"👤 Developer: {DEV}")
     print(f"📌 Version: {VERSION}")
+
     print("=" * 50)
     print("🚀 Bot is running...")
 
@@ -713,4 +909,4 @@ if __name__ == "__main__":
         skip_pending=True,
         timeout=30,
         long_polling_timeout=30
-    )
+        )
