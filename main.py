@@ -17,14 +17,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # قراءة البيانات من ملف .env أو البيئة
-BOT_TOKEN = os.getenv("BOT_TOKEN", "8690038192:AAEawEHQMowifx7DctXp957GB06ClWHFOEY")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8852065025:AAGhMKhxqaNZCpzLJyZmW2Z1SUp8ZbPUzQU")
 
 # تحويل معرفات الأدمن من نص إلى أرقام
-admin_env = os.getenv("ADMINS", "6813661794,1970257616")
+admin_env = os.getenv("ADMINS", "8855682617,8011795436")
 ADMINS = [int(i.strip()) for i in admin_env.split(",") if i.strip()]
 
-DEV = "@N_0_130"
-AUTHOR = "@D_EV_X"
+DEV = "@z_0_y2"
+AUTHOR = "@z_0_y2"
 VERSION = "v2.0"
 
 # =============== نظام المستخدمين والكودات ===============
